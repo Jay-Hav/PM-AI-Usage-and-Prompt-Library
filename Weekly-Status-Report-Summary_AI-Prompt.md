@@ -138,7 +138,7 @@ Transforms raw status call notes or bullet points into a polished, executive-rea
 > **Output format:** [Confluence / Notion / Google Docs | Outlook email — choose one]
 >
 > \<context\>
-> [Optional: 2-3 sentences on the programme, quarter, key OKRs, or anything notable from last week that provides useful background. Leave blank if not needed.]
+> [Optional: 2-3 sentences on the program, quarter, key OKRs, or anything notable from last week that provides useful background. Leave blank if not needed.]
 > \</context\>
 >
 > \<notes\>
@@ -170,7 +170,7 @@ Transforms raw status call notes or bullet points into a polished, executive-rea
 
 ## Notes
 
-- **Audience adjustment**: Narrative depth and technical language scale automatically based on the audience specified. C-suite output minimises jargon; Engineering leads output preserves full technical detail.
+- **Audience adjustment**: Narrative depth and technical language scale automatically based on the audience specified. C-suite output minimizes jargon; Engineering leads output preserves full technical detail.
 - **Jira tickets**: Ticket numbers (e.g. PLAT-423) and full URLs are both handled. Claude will not invent ticket references — only those explicitly mentioned in the notes will appear in the output.
 - **Inferred status**: When RAG status is inferred from context rather than explicitly stated, *(status inferred)* is appended. Review these before sending to confirm accuracy.
 - **Action items format**: Checkbox format (`[ ]`) renders correctly in Confluence, Notion, and Google Docs. Standard bullets are used for Outlook compatibility.
