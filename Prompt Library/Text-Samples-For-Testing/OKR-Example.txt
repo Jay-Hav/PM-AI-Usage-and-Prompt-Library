@@ -1,0 +1,4 @@
+Objective: Build a highly scalable, secure, and performant platform that minimizes downtime and supports rapid feature deployment.
+KR 1: Reduce system downtime by \(50\%\), achieving \(99.99\%\) uptime (less than \(4.38\) minutes of monthly downtime).
+KR 2: Decrease average API response time from \(200\) ms to \(120\) ms for top-tier endpoints.
+KR 3: Achieve a continuous deployment (CI/CD) frequency of at least \(15\) deployments per day.
