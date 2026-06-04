@@ -1,0 +1,238 @@
+EPIC 1
+UNS Core Service & API
+DESCRIPTION:
+Design and build the foundational Node.js/PostgreSQL service, including the routing engine, template system, and public API that all product teams and channel adapters will depend on. This is the critical-path foundation for the entire program.
+COMPLEXITY:
+High
+DEPENDENCIES:
+None
+STORY 1A
+Service scaffolding & infrastructure setup
+As a platform engineer, I want a fully scaffolded Node.js service deployed on AWS via the standard CI/CD pipeline, so that the team has a running baseline to build channel adapters and routing logic against.
+COMPLEXITY
+Medium
+DEPENDS ON
+None
+SUGGESTED ACCEPTANCE CRITERIA
+Node.js service repo created with linting, testing, and CI/CD pipeline configured; service deploys successfully to a dev environment on AWS.
+PostgreSQL database provisioned with migrations tooling in place; connection verified from the service.
+Health check endpoint returns 200 and is reachable from the internal network.
+STORY 1B
+Notification routing engine
+As a product engineer, I want a routing engine that accepts a notification event and dispatches it to the correct channel adapter(s) based on the event type and user preferences, so that the right notification reaches the right channel without duplicate firing.
+COMPLEXITY
+High
+DEPENDS ON
+1A — Service scaffolding
+SUGGESTED ACCEPTANCE CRITERIA
+Routing engine correctly dispatches a single event to one or more channel adapters based on a configurable rules schema; routing logic is unit-tested with ≥90% coverage.
+Duplicate suppression logic prevents the same notification from firing more than once per event per user per channel.
+Routing decisions are logged to the delivery log table with event ID, channel, and timestamp.
+STORY 1C
+Template management system
+As a product engineer, I want a centralized template management system that stores and renders notification templates for all channels, so that content can be managed in one place without channel-specific template stores.
+COMPLEXITY
+High
+DEPENDS ON
+1A — Service scaffolding
+SUGGESTED ACCEPTANCE CRITERIA
+Template CRUD API supports creating, retrieving, updating, and versioning templates per channel type (email, push, in-app).
+Template rendering engine accepts a template ID and a variable payload and returns a rendered output; rendering is tested for all three channel types.
+Templates are stored in PostgreSQL; prior versions are retained and retrievable for audit purposes.
+STORY 1D
+Public notification API (v1)
+As a product team engineer, I want a documented REST API I can call to trigger any notification type for a user event, so that I do not need to integrate with multiple notification systems.
+COMPLEXITY
+High
+DEPENDS ON
+1B — Routing engine, 1C — Templates
+SUGGESTED ACCEPTANCE CRITERIA
+API accepts a POST request with event type, target user ID, channel(s), and variable payload; returns a 202 Accepted with a notification event ID.
+API enforces authentication (API key or service token); unauthenticated requests return 401.
+API input is validated with clear error responses (400) for malformed requests; schema is published in OpenAPI format.
+STORY 1E
+Delivery logging & status tracking (data layer)
+As an ops engineer, I want every notification dispatched to be persisted with its delivery status and outcome, so that we have a single source of truth for notification delivery across all channels.
+COMPLEXITY
+Medium
+DEPENDS ON
+1A — Service scaffolding, 1B — Routing engine
+SUGGESTED ACCEPTANCE CRITERIA
+Delivery log table captures: event ID, user ID, channel, template ID, dispatch timestamp, delivery status (sent / delivered / failed / bounced), and channel-specific metadata.
+Status updates are written asynchronously on delivery callbacks from SendGrid, Firebase, and WebSocket; no delivery is left in a permanent pending state without a timeout.
+Log records are queryable by user ID, event type, channel, and date range with response times under 500ms for typical ops queries.
+EPIC 2
+Transactional Email Migration
+DESCRIPTION:
+Migrate all transactional email logic currently owned by the Platform team — including SendGrid integration, email templates, and user preference logic — into the UNS, then cut over traffic with zero downtime.
+COMPLEXITY:
+High
+DEPENDENCIES:
+1 — UNS Core Service & API
+STORY 2A
+Email channel adapter (SendGrid)
+As a platform engineer, I want a UNS email channel adapter that sends messages via the existing SendGrid integration, so that the UNS can deliver transactional emails without changing the delivery provider.
+COMPLEXITY
+Medium
+DEPENDS ON
+1D — Public API, 1E — Delivery logging
+SUGGESTED ACCEPTANCE CRITERIA
+Adapter sends rendered email templates via SendGrid API; delivery receipts and bounce callbacks are written to the UNS delivery log.
+Adapter handles SendGrid rate limits and transient errors with retry logic (configurable max retries, exponential backoff).
+Integration test suite covers successful send, bounce, and rate-limit scenarios.
+STORY 2B
+Email template migration
+As a platform engineer, I want all existing transactional email templates migrated and validated in the UNS template management system, so that email content is served from the new centralized store before cutover.
+COMPLEXITY
+High
+DEPENDS ON
+1C — Template management, 2A — Email adapter
+SUGGESTED ACCEPTANCE CRITERIA
+All existing transactional email templates inventoried, imported into the UNS template store, and rendered output validated against the legacy equivalent by QA.
+No rendering regressions: visual diff testing confirms parity for all migrated templates.
+Templates reviewed and signed off by the Platform team before cutover.
+STORY 2C
+Email preference logic migration
+As a user, I want my existing email notification preferences to be respected after the migration, so that I do not receive emails I had previously opted out of.
+COMPLEXITY
+Medium
+DEPENDS ON
+5A — Preference data model, 2A — Email adapter
+SUGGESTED ACCEPTANCE CRITERIA
+All user email preference records migrated from the legacy Platform system to the UNS preference store; no data loss confirmed by row count and spot-check validation.
+UNS routing engine suppresses email notifications for users with email opted-out before sending to the adapter.
+Migration script is idempotent and can be re-run without creating duplicates.
+STORY 2D
+Parallel traffic validation (email)
+As an engineering lead, I want the UNS to receive mirrored email traffic in parallel with the legacy system for a defined validation period, so that delivery fidelity is confirmed before hard cutover.
+COMPLEXITY
+High
+DEPENDS ON
+2A, 2B, 2C — Email migration stories
+SUGGESTED ACCEPTANCE CRITERIA
+Shadow mode is enabled: UNS processes all email events in parallel with the legacy system; only the legacy system actually delivers during this period.
+Delivery success rate, bounce rate, and error rate in UNS are within 0.1% of the legacy system over the validation window.
+Validation sign-off documented by Platform team lead and QA before cutover proceeds.
+STORY 2E
+Platform team traffic cutover (email)
+As a platform engineer, I want email traffic fully routed through the UNS and the legacy email system deactivated, so that the Platform team no longer owns a separate email notification system.
+COMPLEXITY
+Low
+DEPENDS ON
+2D — Parallel validation
+SUGGESTED ACCEPTANCE CRITERIA
+100% of email traffic routed through UNS with no fallback to legacy system; legacy email system set to read-only / inactive.
+Zero increase in email delivery failure rate in the 72 hours post-cutover.
+Cutover runbook executed and rollback plan confirmed as available.
+EPIC 3
+Push Notification Migration
+DESCRIPTION:
+Migrate all push notification logic from the Mobile team's system into the UNS, preserving the existing Firebase integration and device token registry, then cut over traffic with zero downtime and no native app changes beyond what is required.
+COMPLEXITY:
+High
+DEPENDENCIES:
+1 — UNS Core Service & API
+STORY 3A
+Push channel adapter (Firebase)
+As a mobile engineer, I want a UNS push channel adapter that sends notifications via the existing Firebase Cloud Messaging integration, so that push delivery is handled by the UNS without requiring a new push provider.
+COMPLEXITY
+Medium
+DEPENDS ON
+1D — Public API, 1E — Delivery logging
+SUGGESTED ACCEPTANCE CRITERIA
+Adapter sends push payloads to FCM using service account credentials; delivery callbacks and invalid token errors are written to the UNS delivery log.
+Adapter handles invalid/expired device tokens by flagging them for removal from the registry.
+Integration tests cover successful delivery, invalid token, and FCM quota-exceeded scenarios.
+STORY 3B
+Device token migration & registration
+As a mobile engineer, I want all existing user device tokens migrated to the UNS and new token registration flowing through the UNS, so that push notifications can be delivered to all users without any gap in token coverage.
+COMPLEXITY
+High
+DEPENDS ON
+3A — Push adapter
+SUGGESTED ACCEPTANCE CRITERIA
+All existing device tokens migrated from the legacy Mobile system to the UNS token store; migration validated by row count and spot-check against the legacy DB.
+New token registration endpoint available in the UNS API; mobile clients can register and update tokens without calling the legacy system.
+Token deduplication logic prevents duplicate token entries for the same user/device pair.
+STORY 3C
+Push payload & template migration
+As a mobile engineer, I want all existing push notification payloads and templates migrated and validated in the UNS, so that push content is consistent with the legacy system after cutover.
+COMPLEXITY
+Medium
+DEPENDS ON
+1C — Template management, 3A — Push adapter
+SUGGESTED ACCEPTANCE CRITERIA
+All push notification templates and payload schemas inventoried, imported into UNS template store, and validated by the Mobile team.
+Rendered payloads tested on both iOS and Android FCM targets; no regressions in title, body, or deep-link fields.
+Templates signed off by Mobile team lead before cutover.
+STORY 3D
+Parallel traffic validation (push)
+As an engineering lead, I want UNS push delivery validated in parallel with the legacy Mobile system over a defined window, so that delivery fidelity is confirmed before hard cutover.
+COMPLEXITY
+High
+DEPENDS ON
+3A, 3B, 3C — Push migration stories
+SUGGESTED ACCEPTANCE CRITERIA
+Shadow mode enabled for push; UNS processes all push events without delivering (or delivering only to internal test devices) during validation.
+UNS push delivery rate and error rate match the legacy system within 0.1% over the validation window.
+Validation sign-off documented by Mobile team lead and QA.
+STORY 3E
+Mobile team traffic cutover (push)
+As a mobile engineer, I want push traffic fully routed through the UNS and the legacy push system deactivated, so that the Mobile team no longer maintains a separate notification system.
+COMPLEXITY
+Low
+DEPENDS ON
+3D — Parallel validation
+SUGGESTED ACCEPTANCE CRITERIA
+100% of push traffic routed through UNS; legacy Mobile notification system set to inactive.
+Zero increase in push delivery failure rate in the 72 hours post-cutover.
+Rollback plan confirmed available and cutover runbook completed.
+EPIC 4
+In-App Alert Migration
+DESCRIPTION:
+Migrate all in-app alert logic from the Frontend team's system into the UNS, preserving the existing WebSocket real-time infrastructure, then cut over traffic with zero downtime.
+COMPLEXITY:
+Medium
+DEPENDENCIES:
+1 — UNS Core Service & API
+STORY 4A
+In-app channel adapter (WebSocket)
+As a frontend engineer, I want a UNS in-app channel adapter that publishes alerts to users via the existing WebSocket real-time infrastructure, so that in-app alerts are routed and logged centrally without replacing the delivery mechanism.
+COMPLEXITY
+High
+DEPENDS ON
+1D — Public API, 1E — Delivery logging
+SUGGESTED ACCEPTANCE CRITERIA
+Adapter publishes rendered in-app alert payloads to the existing WebSocket infrastructure; delivery acknowledgement is written to the UNS delivery log.
+Adapter handles WebSocket disconnected-user scenarios (e.g. queues alert for delivery on reconnect or marks as undelivered).
+Integration tests cover connected-user delivery, disconnected-user handling, and payload rendering.
+STORY 4B
+In-app alert template migration
+As a frontend engineer, I want all existing in-app alert templates migrated and validated in the UNS template management system, so that alert content is consistent before cutover.
+COMPLEXITY
+Medium
+DEPENDS ON
+1C — Template management, 4A — In-app adapter
+SUGGESTED ACCEPTANCE CRITERIA
+All in-app alert templates inventoried, imported, and rendered output validated against legacy equivalents by QA.
+Templates signed off by Frontend team lead before cutover.
+STORY 4C
+Parallel traffic validation (in-app)
+As an engineering lead, I want UNS in-app alert delivery validated in parallel with the legacy Frontend system, so that delivery fidelity is confirmed before hard cutover.
+COMPLEXITY
+Medium
+DEPENDS ON
+4A, 4B — In-app migration stories
+SUGGESTED ACCEPTANCE CRITERIA
+Shadow mode enabled; UNS processes in-app events in parallel without delivering to end users during the validation window.
+Delivery success rate and error rate validated within acceptable tolerance; sign-off by Frontend team lead and QA.
+STORY 4D
+Frontend team traffic cutover (in-app)
+As a frontend engineer, I want in-app alert traffic fully routed through the UNS and the legacy Frontend alert system deactivated, so that the Frontend team no longer owns a separate notification system.
+COMPLEXITY
+Low
+DEPENDS ON
+4C — Parallel validation
+SUGGESTED ACCEPTANCE CRITERIA
+100% of in-app alert traffic routed through UNS; legacy Frontend notification system set to inactive.
+Zero increase in in-app delivery failure rate in the 72 hours post-cutover.
