@@ -2,10 +2,13 @@ Project Brief: Unified Notification Service
 Project Name: Unified Notification Service (UNS)
 Date: June 4, 2026
 Project Manager: TBD
-Overview
+
+Overview:
+
 The engineering organization currently has three separate notification systems that evolved independently: one for transactional emails (owned by the Platform team), one for push notifications (owned by the Mobile team), and one for in-app alerts (owned by the Frontend team). Each has its own infrastructure, its own logic for user preferences, and its own delivery monitoring. This fragmentation causes duplicate maintenance overhead, inconsistent user experiences when multiple notification types fire for the same event, and no single source of truth for notification delivery status.
 The Unified Notification Service project will consolidate all three systems into a single, centralized service that handles routing, templating, user preference management, and delivery tracking across all notification channels — email, push, and in-app.
-Goals
+
+Goals:
 
 Reduce notification-related engineering maintenance overhead by consolidating three systems into one
 Eliminate duplicate or conflicting notifications firing for the same user event
@@ -13,7 +16,8 @@ Provide a single API that any product team can call to trigger any notification 
 Give users a single preference center to manage all notification settings
 Provide ops and support teams with a unified delivery tracking dashboard
 
-Scope
+Scope:
+
 In scope:
 
 Design and build the Unified Notification Service API
@@ -31,7 +35,7 @@ SMS notifications (future phase)
 Marketing or promotional email campaigns (owned by a separate marketing automation platform)
 Native mobile app UI changes beyond what is required for the push migration
 
-Teams Involved
+Teams Involved:
 
 Platform Engineering
 Mobile Engineering
@@ -44,7 +48,7 @@ Security
 Customer Support (stakeholder)
 Engineering Leadership
 
-Technical Context
+Technical Context:
 
 New service will be built in Node.js with a PostgreSQL database for preference storage and delivery logs
 Push notifications will use the existing Firebase integration
@@ -53,14 +57,14 @@ In-app alerts will use a WebSocket connection to the existing real-time infrastr
 Service will be deployed on AWS via the standard CI/CD pipeline
 All three legacy systems must remain operational during migration to avoid notification downtime
 
-Constraints
+Constraints:
 
 Migration must be completed with zero downtime for end users
 Legacy systems cannot be decommissioned until 100% of traffic has been validated on the new service
 Q4 product roadmap features that depend on notification capabilities cannot be blocked by this migration
 Security review required before the new service handles any PII (user email addresses, device tokens)
 
-Success Criteria
+Success Criteria:
 
 All three legacy notification systems decommissioned by end of Q4 2026
 Zero increase in notification delivery failure rate post-migration
